@@ -6,7 +6,6 @@
 #include "node/ledger_secrets.h"
 #include "node/nodes.h"
 #include "node_call_types.h"
-#include "tx_status.h"
 
 #include <nlohmann/json.hpp>
 
@@ -14,24 +13,15 @@ namespace ccf
 {
   struct GetCommit
   {
+    struct In
+    {
+      std::optional<int64_t> commit = std::nullopt;
+    };
+
     struct Out
     {
       uint64_t term;
       int64_t commit;
-    };
-  };
-
-  struct GetTxStatus
-  {
-    struct In
-    {
-      uint64_t view;
-      uint32_t seqno;
-    };
-
-    struct Out
-    {
-      TxStatus status;
     };
   };
 

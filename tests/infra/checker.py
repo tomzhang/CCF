@@ -2,10 +2,7 @@
 # Licensed under the Apache 2.0 License.
 
 import json
-import http
 import time
-
-from infra.tx_status import TxStatus
 
 
 def wait_for_global_commit(node_client, commit_index, term, mksign=False, timeout=3):
@@ -27,19 +24,10 @@ def wait_for_global_commit(node_client, commit_index, term, mksign=False, timeou
 
     end_time = time.time() + timeout
     while time.time() < end_time:
-        r = node_client.get("tx", {"view": term, "seqno": commit_index})
-        assert (
-            r.status == http.HTTPStatus.OK
-        ), f"tx request returned HTTP status {r.status}"
-        status = TxStatus(r.result["status"])
-        if status == TxStatus.Committed:
+        r = node_client.get("getCommit", {"commit": commit_index})
+        if r.global_commit >= commit_index and r.result["term"] == term:
             return
-        elif status == TxStatus.Invalid:
-            raise RuntimeError(
-                f"Transaction ID {term}.{commit_index} is marked invalid and will never be committed"
-            )
-        else:
-            time.sleep(0.1)
+        time.sleep(0.1)
     raise TimeoutError("Timed out waiting for commit")
 
 
