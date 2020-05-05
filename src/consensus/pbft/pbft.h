@@ -100,7 +100,7 @@ namespace pbft
     {
       const auto prev_idx = start_idx - 1;
 
-      LOG_INFO_FMT(
+      LOG_DEBUG_FMT(
         "Send append entries from {} to {}: {} to {}",
         id,
         to,

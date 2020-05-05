@@ -224,7 +224,7 @@ int main(int argc, char** argv)
       "shift factor, ie - given N, the limit is (1 << N)")
     ->capture_default_str();
 
-  size_t max_fragment_size = 16;
+  size_t max_fragment_size = 18;
   app
     .add_option(
       "--max-fragment-size",

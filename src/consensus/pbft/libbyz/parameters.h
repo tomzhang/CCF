@@ -25,7 +25,7 @@ const int checkpoint_interval = 8;
 // unable to make progress.
 const int max_out = 512;
 
-static const size_t Max_requests_in_batch = 1500;
+static const size_t Max_requests_in_batch = 6000;
 
 static const size_t num_senders = 2;
 // number of sender threads

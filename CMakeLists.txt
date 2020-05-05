@@ -13,6 +13,8 @@ project(
 
 set(ENV{BETTER_EXCEPTIONS} 1)
 
+#set(CMAKE_CXX_FLAGS_RELEASE "-O4")
+
 # Set the default install prefix for CCF. Users may override this value with the
 # cmake command. For example:
 #

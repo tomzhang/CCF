@@ -85,8 +85,8 @@ Prepare::Prepare(
 #else
     if (should_sign)
     {
-    //  rep().prepare_sig_size = pbft::GlobalState::get_node().gen_signature(
-    //    contents(), sizeof(Prepare_rep), contents() + sizeof(Prepare_rep));
+      rep().prepare_sig_size = pbft::GlobalState::get_node().gen_signature(
+        contents(), sizeof(Prepare_rep), contents() + sizeof(Prepare_rep));
     }
 #endif
   }
