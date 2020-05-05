@@ -336,6 +336,21 @@ void Replica::receive_message(const uint8_t* data, uint32_t size)
   {
     uint32_t num_worker_thread = enclave::ThreadMessaging::thread_count - 1;
     target_thread = (((Request*)m)->user_id() % num_worker_thread) + 1;
+  } 
+  else if (enclave::ThreadMessaging::thread_count > 1 && m->tag() == Pre_prepare_tag)
+  {
+    uint32_t num_worker_thread = enclave::ThreadMessaging::thread_count - 1;
+    target_thread = (primary() % num_worker_thread) + 1;
+  }
+  else if (enclave::ThreadMessaging::thread_count > 1 && m->tag() == Prepare_tag)
+  {
+    uint32_t num_worker_thread = enclave::ThreadMessaging::thread_count - 1;
+    target_thread = (((Prepare*)m)->id() % num_worker_thread) + 1;
+  }
+  else if (enclave::ThreadMessaging::thread_count > 1 && m->tag() == Commit_tag)
+  {
+    uint32_t num_worker_thread = enclave::ThreadMessaging::thread_count - 1;
+    target_thread = (((Commit*)m)->id() % num_worker_thread) + 1;
   }
 
   if (f() != 0 && target_thread != 0)
@@ -1131,7 +1146,9 @@ void Replica::send_prepare(Seqno seqno, std::optional<ByzInfo> byz_info)
           pp->digest(),
           msg->nonce,
           nullptr,
-          pp->is_signed());
+          pp->is_signed(),
+          -1,
+          false);
         p->save_signature(msg->signature, msg->signature_size);
         int send_node_id =
           (msg->send_only_to_self ? self->node_id : All_replicas);

@@ -27,8 +27,9 @@ Prepare::Prepare(
   uint64_t nonce_,
   Principal* dst,
   bool is_signed,
-  int id) :
-  Prepare(v, s, pp_d, nonce_, get_nonce_hash(nonce_), dst, is_signed, id)
+  int id,
+  bool should_sign) :
+  Prepare(v, s, pp_d, nonce_, get_nonce_hash(nonce_), dst, is_signed, id, should_sign)
 {}
 
 Prepare::Prepare(
@@ -39,7 +40,8 @@ Prepare::Prepare(
   uint64_t hashed_nonce_,
   Principal* dst,
   bool is_signed,
-  int id) :
+  int id,
+  bool should_sign) :
   Message(
     Prepare_tag,
     sizeof(Prepare_rep)
@@ -81,15 +83,15 @@ Prepare::Prepare(
     auth_len = sizeof(Prepare_rep);
     auth_src_offset = 0;
 #else
-    rep().prepare_sig_size = pbft::GlobalState::get_node().gen_signature(
-      contents(), sizeof(Prepare_rep), contents() + sizeof(Prepare_rep));
+    if (should_sign)
+    {
+    //  rep().prepare_sig_size = pbft::GlobalState::get_node().gen_signature(
+    //    contents(), sizeof(Prepare_rep), contents() + sizeof(Prepare_rep));
+    }
 #endif
   }
   else
   {
-    // dst->gen_mac_out(contents(), sizeof(Prepare_rep),
-    //     contents()+sizeof(Prepare_rep));
-
     auth_type = Auth_type::out;
     auth_len = sizeof(Prepare_rep);
     auth_src_offset = 0;
