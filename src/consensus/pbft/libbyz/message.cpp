@@ -15,7 +15,7 @@ Message::Message(unsigned sz)
   if (sz != 0)
   {
     int max_size = (ALIGNED_SIZE(sz));
-    msg_buf = (Message_rep*)malloc(max_size);
+    msg_buf = (Message_rep*)aligned_alloc(8, max_size);
     msg = std::move(make_Ref<MsgBufCounter>(msg_buf, max_size, true));
     if (msg_buf != nullptr)
     {
@@ -34,7 +34,7 @@ Message::Message(unsigned sz)
 Message::Message(int t, unsigned sz)
 {
   int max_size = ALIGNED_SIZE(sz);
-  msg_buf = (Message_rep*)malloc(max_size);
+  msg_buf = (Message_rep*)aligned_alloc(8, max_size);
   msg = std::move(make_Ref<MsgBufCounter>(msg_buf, max_size, true));
 
   PBFT_ASSERT(ALIGNED(msg_buf), "Improperly aligned pointer");
@@ -53,6 +53,7 @@ Message::Message(Message_rep* cont)
   int max_size = -1; // To prevent contents from being deallocated or trimmed
   msg = std::move(make_Ref<MsgBufCounter>(cont, max_size, false));
   msg_buf = cont;
+  PBFT_ASSERT(ALIGNED(msg_buf), "Improperly aligned pointer");
   auth_type = Auth_type::unknown;
   auth_len = 0;
   auth_dst_offset = 0;

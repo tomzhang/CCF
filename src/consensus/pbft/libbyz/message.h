@@ -41,8 +41,8 @@ struct Message_rep
 {
   short tag;
   short extra; // May be used to store extra information.
-  int size; // Must be a multiple of 8 bytes to ensure proper
-            // alignment of embedded messages.
+  uint32_t size; // Must be a multiple of 8 bytes to ensure proper
+                 // alignment of embedded messages.
 
   // Followed by char payload[size-sizeof(Message_rep)];
 };

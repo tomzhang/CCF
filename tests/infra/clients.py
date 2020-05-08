@@ -22,6 +22,9 @@ from cryptography.hazmat.primitives import asymmetric
 from websocket import create_connection
 from loguru import logger as LOG
 
+from requests.adapters import HTTPAdapter
+from requests.packages.urllib3.poolmanager import PoolManager
+from requests.packages.urllib3.util.ssl_ import create_urllib3_context
 
 def truncate(string, max_len=256):
     if len(string) > max_len:
@@ -309,6 +312,20 @@ class CurlClient:
     def signed_request(self, request):
         return self._request(request, is_signed=True)
 
+class TlsAdapter(HTTPAdapter):
+    def init_poolmanager(self, *args, **kwargs):
+        context = create_urllib3_context()
+        context.set_ecdh_curve("secp256k1")
+        kwargs['ssl_context'] = context
+        return super(TlsAdapter, self).init_poolmanager(*args, **kwargs)
+
+    def proxy_manager_for(self, *args, **kwargs):
+        context = create_urllib3_context()
+        context.set_ecdh_curve("secp256k1")
+        context.load_verify_locations(cafile=self.ca)
+        context.load_cert_chain(certfile=self.cert, keyfile=self.key)
+        kwargs['ssl_context'] = context
+        return super(TlsAdapter, self).proxy_manager_for(*args, **kwargs)
 
 class RequestClient:
     def __init__(
@@ -333,6 +350,7 @@ class RequestClient:
         self.session = requests.Session()
         self.session.verify = self.ca
         self.session.cert = (self.cert, self.key)
+        self.session.mount("https://", TlsAdapter())
 
     def _just_request(self, request, is_signed=False):
         auth_value = None

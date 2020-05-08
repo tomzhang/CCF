@@ -107,6 +107,8 @@ public:
   // Effects: Generates a signature "sig" (from this principal) for
   // "src_len" bytes starting at "src" and puts the result in "sig" and
   // returns the length of the signature
+  bool verify_signature(
+    const char* src, unsigned src_len, char* sig, unsigned sig_len);
 
 protected:
   std::string service_name;

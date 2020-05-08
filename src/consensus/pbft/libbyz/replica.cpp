@@ -336,13 +336,15 @@ void Replica::receive_message(const uint8_t* data, uint32_t size)
   {
     uint32_t num_worker_thread = enclave::ThreadMessaging::thread_count - 1;
     target_thread = (((Request*)m)->user_id() % num_worker_thread) + 1;
-  } 
-  else if (enclave::ThreadMessaging::thread_count > 1 && m->tag() == Pre_prepare_tag)
+  }
+  else if (
+    enclave::ThreadMessaging::thread_count > 1 && m->tag() == Pre_prepare_tag)
   {
     uint32_t num_worker_thread = enclave::ThreadMessaging::thread_count - 1;
     target_thread = (primary() % num_worker_thread) + 1;
   }
-  else if (enclave::ThreadMessaging::thread_count > 1 && m->tag() == Prepare_tag)
+  else if (
+    enclave::ThreadMessaging::thread_count > 1 && m->tag() == Prepare_tag)
   {
     uint32_t num_worker_thread = enclave::ThreadMessaging::thread_count - 1;
     target_thread = (((Prepare*)m)->id() % num_worker_thread) + 1;
@@ -940,7 +942,14 @@ void Replica::send_pre_prepare(bool do_not_wait_for_batch_size)
       }
       self->send_responses(pp);
 
-      self->add_proof(pp->seqno(), self->id(), pp->get_digest_sig());
+      self->add_proof(
+        pp->seqno(),
+        self->id(),
+        pp->digest(),
+        pp->get_replicated_state_merkle_root(),
+        pp->get_hashed_nonce(),
+        pp->get_digest_sig(),
+        pp->get_digest_sig_size());
 
       if (pbft::GlobalState::get_node().f() == 0)
       {
@@ -1060,8 +1069,6 @@ void Replica::handle(Pre_prepare* m)
             << ", low_bound:" << low_bound << ", has complete_new_view:"
             << (has_complete_new_view() ? "true" : "false") << std::endl;
 
-  add_proof(ms, m->id(), m->get_digest_sig());
-
   if (in_wv(m) && ms > low_bound && has_complete_new_view())
   {
     LOG_TRACE << "processing pre prepare with seqno: " << ms << std::endl;
@@ -1080,6 +1087,15 @@ void Replica::handle(Pre_prepare* m)
       }
       send_prepare(ms);
     }
+
+    add_proof(
+      m->seqno(),
+      m->id(),
+      m->digest(),
+      m->get_replicated_state_merkle_root(),
+      m->get_hashed_nonce(),
+      m->get_digest_sig(),
+      m->get_digest_sig_size());
     return;
   }
 
@@ -1154,7 +1170,14 @@ void Replica::send_prepare(Seqno seqno, std::optional<ByzInfo> byz_info)
           (msg->send_only_to_self ? self->node_id : All_replicas);
         self->send(p, send_node_id);
 
-        self->add_proof(p->seqno(), self->node_id, p->digest_sig());
+        self->add_proof(
+          pp->seqno(),
+          self->id(),
+          pp->digest(),
+          pp->get_replicated_state_merkle_root(),
+          p->get_hashed_nonce(),
+          pp->get_digest_sig(),
+          pp->get_digest_sig_size());
 
         Prepared_cert& pc = self->plog.fetch(msg->seqno);
         pc.add_mine(p);
@@ -1200,8 +1223,11 @@ void Replica::send_prepare(Seqno seqno, std::optional<ByzInfo> byz_info)
       if (byz_info.has_value())
       {
         msg->info = byz_info.value();
-        msg->signature_size =
-          Prepare::Sign(msg->signature, id(), msg->hashed_nonce, pp->digest());
+        msg->signature_size = Prepare::Sign(
+          msg->signature,
+          pp->get_replicated_state_merkle_root(),
+          msg->hashed_nonce,
+          pp->digest());
         fn(pp, this, std::move(msg));
       }
       else
@@ -1215,7 +1241,11 @@ void Replica::send_prepare(Seqno seqno, std::optional<ByzInfo> byz_info)
         }
         else
         {
-          sig_size = Prepare::Sign(sig, id(), hashed_nonce, pp->digest());
+          sig_size = Prepare::Sign(
+            sig,
+            pp->get_replicated_state_merkle_root(),
+            hashed_nonce,
+            pp->digest());
         }
       }
       return;
@@ -1284,9 +1314,22 @@ void Replica::handle(Prepare* m)
     in_wv(m) && ms > low_bound && primary() != m->id() &&
     has_complete_new_view())
   {
-    add_proof(ms, m->id(), m->digest_sig());
-
     Prepared_cert& ps = plog.fetch(ms);
+
+    Pre_prepare* pp = ps.pre_prepare();
+
+    if (pp != nullptr)
+    {
+      add_proof(
+        m->seqno(),
+        m->id(),
+        pp->digest(),
+        pp->get_replicated_state_merkle_root(),
+        m->get_hashed_nonce(),
+        m->digest_sig(),
+        m->digest_sig_size());
+    }
+
     if (ps.add(m) && ps.is_complete())
     {
       send_commit(ms, f() == 0);
@@ -3406,7 +3449,14 @@ void Replica::try_end_recovery()
   }
 }
 
-void Replica::add_proof(Seqno seqno, int id, PbftSignature& sig)
+void Replica::add_proof(
+  Seqno seqno,
+  uint8_t id,
+  const Digest& pp_digest,
+  const std::array<uint8_t, MERKLE_ROOT_SIZE>& merkle_root,
+  uint64_t hashed_nonce,
+  const PbftSignature& sig,
+  uint32_t sig_size)
 {
   ReceiptProof* proofs;
   auto it = receipt_proofs.find(seqno);
@@ -3421,7 +3471,8 @@ void Replica::add_proof(Seqno seqno, int id, PbftSignature& sig)
   {
     proofs = it->second.get();
   }
-  proofs->add_proof(id, sig);
+  proofs->add_proof(
+    id, seqno, pp_digest, merkle_root, hashed_nonce, sig, sig_size);
 }
 
 int Replica::min_pre_prepare_batch_size =

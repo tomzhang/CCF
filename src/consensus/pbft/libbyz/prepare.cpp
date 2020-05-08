@@ -29,7 +29,8 @@ Prepare::Prepare(
   bool is_signed,
   int id,
   bool should_sign) :
-  Prepare(v, s, pp_d, nonce_, get_nonce_hash(nonce_), dst, is_signed, id, should_sign)
+  Prepare(
+    v, s, pp_d, nonce_, get_nonce_hash(nonce_), dst, is_signed, id, should_sign)
 {}
 
 Prepare::Prepare(
@@ -176,9 +177,12 @@ bool Prepare::pre_verify()
 }
 
 size_t Prepare::Sign(
-  PbftSignature& result, NodeId id, uint64_t hashed_nonce, const Digest& pp_d)
+  PbftSignature& result,
+  const std::array<uint8_t, MERKLE_ROOT_SIZE>& merkle_root,
+  uint64_t hashed_nonce,
+  const Digest& pp_d)
 {
-  signature s(pp_d, id, hashed_nonce);
+  signature s(pp_d, merkle_root, hashed_nonce);
 
   return pbft::GlobalState::get_node().gen_signature(
     reinterpret_cast<char*>(&s), sizeof(s), result);

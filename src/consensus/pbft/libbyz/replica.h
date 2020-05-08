@@ -395,7 +395,14 @@ private:
   // Effects: Returns non-zero iff there is a pre-prepare pp that committed for
   // sequence number "s" (in this case it returns pp).
 
-  void add_proof(Seqno seqno, int id, PbftSignature& sig);
+  void add_proof(
+    Seqno seqno,
+    uint8_t id,
+    const Digest& pp_digest,
+    const std::array<uint8_t, MERKLE_ROOT_SIZE>& merkle_root,
+    uint64_t hashed_nonce,
+    const PbftSignature& sig,
+    uint32_t sig_size);
 
   bool has_complete_new_view() const;
   // Effects: Returns true iff the replica has complete new-view

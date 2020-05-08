@@ -45,7 +45,7 @@ Pre_prepare::Pre_prepare(
   Digest::Context context;
   dh.update_last(context, (char*)&nonce_, sizeof(uint64_t));
   dh.finalize(context);
-  rep().hashed_nonce = dh;
+  rep().hashed_nonce = dh.hash();
 
   // Fill in the request portion with as many requests as possible
   // and compute digest.
@@ -218,8 +218,12 @@ bool Pre_prepare::set_digest(int64_t signed_version)
 
 #ifdef SIGN_BATCH
   pbft::GlobalState::get_replica().set_next_expected_sig_offset();
-  rep().sig_size = pbft::GlobalState::get_node().gen_signature(
-    d.digest(), d.digest_size(), rep().batch_digest_signature);
+
+  rep().sig_size = Prepare::Sign(
+    rep().batch_digest_signature,
+    rep().replicated_state_merkle_root,
+    rep().hashed_nonce,
+    d);
 #endif
 
   return true;
@@ -315,9 +319,12 @@ bool Pre_prepare::pre_verify()
         return true;
       }
 
+      Prepare::signature s(
+        rep().digest, rep().replicated_state_merkle_root, rep().hashed_nonce);
+
       if (!sender_principal->verify_signature(
-            rep().digest.digest(),
-            rep().digest.digest_size(),
+            (const char*)&s,
+            sizeof(Prepare::signature),
             get_digest_sig().data(),
             rep().sig_size))
       {

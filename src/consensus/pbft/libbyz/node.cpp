@@ -231,6 +231,13 @@ size_t Node::gen_signature(
   return sig_size;
 }
 
+bool Node::verify_signature(
+  const char* src, unsigned src_len, char* sig, unsigned sig_len)
+{
+  return key_pair->verify(
+    (const uint8_t*)src, (size_t)src_len, (const uint8_t*)sig, (size_t)sig_len);
+}
+
 Request_id Node::new_rid()
 {
   return request_id_generator.next_rid();

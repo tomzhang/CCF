@@ -35,7 +35,7 @@ struct Pre_prepare_rep : public Message_rep
   View view;
   Seqno seqno;
   std::array<uint8_t, MERKLE_ROOT_SIZE> replicated_state_merkle_root;
-  Digest hashed_nonce;
+  uint64_t hashed_nonce;
   Seqno last_gov_req_updated;
   int64_t ctx; // a context provided when a the batch is executed
                // the contents are opaque
@@ -213,6 +213,11 @@ public:
   {
     return rep().batch_digest_signature;
   }
+
+  uint32_t get_digest_sig_size() const
+  {
+    return rep().sig_size;
+  }
 #endif
 
   // Maximum number of big reqs in pre-prepares.
@@ -249,6 +254,9 @@ public:
   // Effects: checks if there is a signature over the pre_prepare message
 
   uint64_t get_nonce() const;
+  // Effects: returns the unhashed nonce
+
+  uint64_t get_hashed_nonce() const;
   // Effects: returns the unhashed nonce
 
 private:
@@ -352,4 +360,9 @@ inline bool Pre_prepare::did_exec_gov_req() const
 inline uint64_t Pre_prepare::get_nonce() const
 {
   return nonce;
+}
+
+inline uint64_t Pre_prepare::get_hashed_nonce() const
+{
+  return rep().hashed_nonce;
 }

@@ -104,6 +104,7 @@ public:
 
 #ifdef SIGN_BATCH
   PbftSignature& digest_sig() const;
+  uint32_t digest_sig_size() const;
 #endif
 
   bool is_proof() const;
@@ -119,23 +120,30 @@ public:
   uint64_t get_nonce() const;
   // Effects: returns the unhashed nonce
 
+  uint64_t get_hashed_nonce() const;
+
+#pragma pack(push)
+#pragma pack(1)
   struct signature
   {
-    uint32_t magic = 0xba5eba11;
-    NodeId id;
     Digest d;
     uint64_t hashed_nonce;
+    std::array<uint8_t, MERKLE_ROOT_SIZE> merkle_root;
 
-    signature(const Digest& d_, NodeId id_, uint64_t nonce) :
+    signature(
+      const Digest& d_,
+      const std::array<uint8_t, MERKLE_ROOT_SIZE>& merkle_root_,
+      uint64_t nonce) :
       d(d_),
-      id(id_),
+      merkle_root(merkle_root_),
       hashed_nonce(nonce)
     {}
   };
+#pragma pack(pop)
 
   static size_t Sign(
     PbftSignature& result,
-    NodeId id,
+    const std::array<uint8_t, MERKLE_ROOT_SIZE>& merkle_root,
     uint64_t hashed_nonce,
     const Digest& pp_d);
 
@@ -177,6 +185,10 @@ inline PbftSignature& Prepare::digest_sig() const
 {
   return rep().batch_digest_signature;
 }
+inline uint32_t Prepare::digest_sig_size() const
+{
+  return rep().digest_sig_size;
+}
 #endif
 
 inline bool Prepare::is_proof() const
@@ -193,4 +205,9 @@ inline bool Prepare::match(const Prepare* p) const
 inline uint64_t Prepare::get_nonce() const
 {
   return nonce;
+}
+
+inline uint64_t Prepare::get_hashed_nonce() const
+{
+  return rep().hashed_nonce;
 }
