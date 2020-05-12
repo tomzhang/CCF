@@ -169,6 +169,12 @@ namespace timing
     vector<SentRequest> sends;
     vector<ReceivedReply> receives;
 
+    std::map<size_t, SentRequest> sends_map;
+
+    double total_time_taken = 0;
+    uint64_t total_iters = 0;
+    uint64_t before_total_iters = 1000;
+
     bool active = false;
 
   public:
@@ -205,11 +211,25 @@ namespace timing
     {
       sends.push_back(
         {Clock::now() - start_time, method, rpc_id, expects_commit});
+      sends_map.insert(
+        {rpc_id, {Clock::now() - start_time, method, rpc_id, expects_commit}});
     }
 
     void record_receive(size_t rpc_id, const optional<CommitIDs>& commit)
     {
-      receives.push_back({Clock::now() - start_time, rpc_id, commit});
+      auto t = Clock::now() - start_time;
+      receives.push_back({t, rpc_id, commit});
+
+      auto it = sends_map.find(rpc_id);
+      if (it != sends_map.end())
+      {
+        ++before_total_iters;
+        if (before_total_iters > 1000)
+        {
+         total_time_taken += (t - it->second.send_time).count() / 1'000'000;
+         ++total_iters;
+        }
+      }
     }
 
     // Repeatedly calls getCommit RPC until the target index has been committed
@@ -527,6 +547,10 @@ namespace timing
     void write_to_file(const string& filename)
     {
       LOG_INFO_FMT("Writing timing data to files");
+
+      LOG_INFO_FMT(
+        "PERF_CLIENT_SEARCH_PATTERN-{}",
+        total_time_taken/total_iters);
 
       const auto sent_path = filename + "_sent.csv";
       ofstream sent_csv(sent_path, ofstream::out);
