@@ -139,6 +139,30 @@ bool Prepare::pre_verify()
     return false;
   }
 
+  auto sender_principal = pbft::GlobalState::get_node().get_principal(rep().id);
+  if (
+    !sender_principal->has_certificate_set() &&
+    pbft::GlobalState::get_node().f() == 0)
+  {
+    // Do not verify signature of first pre-prepare since node certificate
+    // required for verification is contained in the pre-prepare requests
+    return true;
+  }
+
+  Prepare::signature s(pp_digest, pp_merkle_root, rep().hashed_nonce);
+
+  if (!sender_principal->verify_signature(
+        (const char*)&s,
+        sizeof(Prepare::signature),
+        rep().batch_digest_signature.data(),
+        rep().digest_sig_size))
+  {
+    // NOTE: this is fixed in master, will not have a perf impact
+    // LOG_INFO << "failed to verify signature on the digest, seqno:"
+    //         << rep().seqno << ", ms:" << rep().id << std::endl;
+    // return false;
+  }
+
   if (rep().extra == 0)
   {
     // Check signature size.
@@ -187,7 +211,6 @@ size_t Prepare::Sign(
   return pbft::GlobalState::get_node().gen_signature(
     reinterpret_cast<char*>(&s), sizeof(s), result);
 }
-
 void Prepare::save_signature(PbftSignature& signature, size_t signature_size)
 {
   rep().digest_sig_size = signature_size;

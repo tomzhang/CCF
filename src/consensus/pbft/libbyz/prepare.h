@@ -122,6 +122,13 @@ public:
 
   uint64_t get_hashed_nonce() const;
 
+  void set_for_pre_verify(
+    const Digest& d, const std::array<uint8_t, MERKLE_ROOT_SIZE>& merkle_root_)
+  {
+    std::copy(merkle_root_.begin(), merkle_root_.end(), pp_merkle_root.begin());
+    pp_digest = d;
+  }
+
 #pragma pack(push)
 #pragma pack(1)
   struct signature
@@ -149,6 +156,8 @@ public:
 
 private:
   uint64_t nonce;
+  Digest pp_digest;
+  std::array<uint8_t, MERKLE_ROOT_SIZE> pp_merkle_root;
 
   Prepare_rep& rep() const;
   // Effects: Casts contents to a Prepare_rep&

@@ -343,11 +343,27 @@ void Replica::receive_message(const uint8_t* data, uint32_t size)
     uint32_t num_worker_thread = enclave::ThreadMessaging::thread_count - 1;
     target_thread = (primary() % num_worker_thread) + 1;
   }
-  else if (
-    enclave::ThreadMessaging::thread_count > 1 && m->tag() == Prepare_tag)
+  else if (m->tag() == Prepare_tag)
   {
-    uint32_t num_worker_thread = enclave::ThreadMessaging::thread_count - 1;
-    target_thread = (((Prepare*)m)->id() % num_worker_thread) + 1;
+    Prepare* p = (Prepare*)m;
+    if (enclave::ThreadMessaging::thread_count > 1)
+    {
+      uint32_t num_worker_thread = enclave::ThreadMessaging::thread_count - 1;
+      target_thread = (p->id() % num_worker_thread) + 1;
+    }
+
+    Seqno ms = p->seqno();
+
+    if (plog.within_range(ms))
+    {
+      Prepared_cert& ps = plog.fetch(ms);
+      Pre_prepare* pp = ps.pre_prepare();
+      if (pp != nullptr)
+      {
+        p->set_for_pre_verify(
+          pp->digest(), pp->get_replicated_state_merkle_root());
+      }
+    }
   }
   else if (enclave::ThreadMessaging::thread_count > 1 && m->tag() == Commit_tag)
   {
